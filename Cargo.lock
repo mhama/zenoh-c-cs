@@ -506,6 +506,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "csbindgen"
+version = "1.9.3"
+source = "git+https://github.com/mhama/csbindgen-for-zenoh.git?branch=20250325-for-zenoh-c#e12ecde5cd91c4ba54dca3322c19f6a2d0760ea8"
+dependencies = [
+ "regex",
+ "syn 2.0.87",
+]
+
+[[package]]
 name = "darling"
 version = "0.20.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3600,6 +3609,7 @@ dependencies = [
  "cbindgen",
  "chrono",
  "const_format",
+ "csbindgen",
  "evalexpr",
  "flume",
  "fs2",
