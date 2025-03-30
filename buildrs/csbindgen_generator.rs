@@ -22,7 +22,7 @@ pub fn generate_csharp_binding() {
     }
     builder
         .input_extern_file("csbindgen/result.rs")// special z_result_t handling
-        .csharp_dll_name("libzenohc")
+        .csharp_dll_name("zenohc")
         .csharp_class_name("ZenohNative")
         .csharp_namespace("Zenoh.Plugins")
         .csharp_dll_name_if("UNITY_IOS && !UNITY_EDITOR", "__Internal")
