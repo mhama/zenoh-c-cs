@@ -44,6 +44,7 @@ pub fn generate_csharp_binding() {
         .unwrap();
     
     replace_enum_type_in_generated_file();
+    strip_shm_dll_imports_if_feature_disabled();
 }
 
 // find all .rs files in a directory recursively
@@ -62,6 +63,71 @@ fn find_rust_files_recursive(dir: &Path, files: &mut Vec<String>) {
             }
         }
     }
+}
+
+// csbindgen ignores #[cfg(feature = "shared-memory")] and always emits these
+// symbols. When the feature is off, drop them to avoid iOS link errors.
+fn strip_shm_dll_imports_if_feature_disabled() {
+    if std::env::var_os("CARGO_FEATURE_SHARED_MEMORY").is_some() {
+        return;
+    }
+
+    let content = match fs::read_to_string(TARGET_FILE_PATH) {
+        Ok(c) => c,
+        Err(e) => {
+            eprintln!("Failed to read {}: {}", TARGET_FILE_PATH, e);
+            return;
+        }
+    };
+
+    let lines: Vec<&str> = content.lines().collect();
+    let mut out = String::with_capacity(content.len());
+    let mut pending_docs: Vec<&str> = Vec::new();
+    let mut i = 0;
+
+    while i < lines.len() {
+        let line = lines[i];
+        let trimmed = line.trim_start();
+
+        if trimmed.starts_with("///") {
+            pending_docs.push(line);
+            i += 1;
+            continue;
+        }
+
+        if trimmed.starts_with("[DllImport")
+            && entry_point_contains_shm(line)
+            && i + 1 < lines.len()
+        {
+            pending_docs.clear();
+            i += 2;
+            continue;
+        }
+
+        for doc in pending_docs.drain(..) {
+            out.push_str(doc);
+            out.push('\n');
+        }
+        out.push_str(line);
+        out.push('\n');
+        i += 1;
+    }
+
+    if let Err(e) = fs::write(TARGET_FILE_PATH, out) {
+        eprintln!("Failed to write updated file: {}", e);
+    }
+}
+
+fn entry_point_contains_shm(line: &str) -> bool {
+    let key = "EntryPoint = \"";
+    let Some(start) = line.find(key) else {
+        return false;
+    };
+    let rest = &line[start + key.len()..];
+    let Some(end) = rest.find('"') else {
+        return false;
+    };
+    rest[..end].contains("shm")
 }
 
 // fix z_consolidation_mode_t error, where uint type is generated but it has -1 value.
